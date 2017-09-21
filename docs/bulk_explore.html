@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+
+<meta name="author" content="David Gerard" />
+
+<meta name="date" content="2017-09-21" />
+
+<title>Try Bimodal on Bulk Data</title>
+
+<script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/cosmo.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<script src="site_libs/jqueryui-1.11.4/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-1.1/textmate.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-1.1/highlight.js"></script>
+<link href="site_libs/font-awesome-4.5.0/css/font-awesome.min.css" rel="stylesheet" />
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+  pre:not([class]) {
+    background-color: white;
+  }
+</style>
+<script type="text/javascript">
+if (window.hljs && document.readyState && document.readyState === "complete") {
+   window.setTimeout(function() {
+      hljs.initHighlighting();
+   }, 0);
+}
+</script>
+
+
+
+<style type="text/css">
+h1 {
+  font-size: 34px;
+}
+h1.title {
+  font-size: 38px;
+}
+h2 {
+  font-size: 30px;
+}
+h3 {
+  font-size: 24px;
+}
+h4 {
+  font-size: 18px;
+}
+h5 {
+  font-size: 16px;
+}
+h6 {
+  font-size: 12px;
+}
+.table th:not([align]) {
+  text-align: left;
+}
+</style>
+
+
+</head>
+
+<body>
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+code {
+  color: inherit;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+img {
+  max-width:100%;
+  height: auto;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+</style>
+
+
+<style type="text/css">
+/* padding for bootstrap navbar */
+body {
+  padding-top: 51px;
+  padding-bottom: 40px;
+}
+/* offset scroll position for anchor links (for fixed navbar)  */
+.section h1 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+
+.section h2 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h3 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h4 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h5 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h6 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+</style>
+
+<script>
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark it active
+  menuAnchor.parent().addClass('active');
+
+  // if it's got a parent navbar menu mark it active as well
+  menuAnchor.closest('li.dropdown').addClass('active');
+});
+</script>
+
+
+<div class="container-fluid main-container">
+
+<!-- tabsets -->
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+</script>
+
+<!-- code folding -->
+
+
+
+
+<script>
+$(document).ready(function ()  {
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_').toLowerCase();
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+  padding-left: 25px;
+  text-indent: 0;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row-fluid">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">scmouthwash</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Home</a>
+</li>
+<li>
+  <a href="about.html">About</a>
+</li>
+<li>
+  <a href="license.html">License</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        <li>
+  <a href="https://github.com/jdblischak/workflowr">
+    <span class="fa fa-github"></span>
+     
+  </a>
+</li>
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div class="fluid-row" id="header">
+
+
+
+<h1 class="title toc-ignore">Try Bimodal on Bulk Data</h1>
+<h4 class="author"><em>David Gerard</em></h4>
+<h4 class="date"><em>September 21, 2017</em></h4>
+
+</div>
+
+
+<div id="abstract" class="section level1">
+<h1>Abstract</h1>
+<p>I try the same as code as in single cell bimodal signal <a href="m_vs_svle_bimodal.html">here</a> but with bulk GTEx data.</p>
+<p>MOUTHWASH works fine here. So I it might also have something to do with the number of zeros.</p>
+</div>
+<div id="analysis" class="section level1">
+<h1>Analysis</h1>
+<pre class="r"><code>library(vicar)
+library(sva)
+library(ashr)
+library(limma)
+library(pROC)
+library(seqgendiff)
+library(tidyverse)
+hdat &lt;- as.matrix(read.csv(&quot;../data/heart.csv&quot;)[, -c(1, 2)])</code></pre>
+<p>Signal generation function. I fiddled with the signal to get AUC comparable with that seen in the SC data.</p>
+<pre class="r"><code>## signal function
+gen_beta &lt;- function(n, pi0) {
+  beta &lt;- sample(x = c(-0.2, 0.2, 0), prob = c((1 - pi0) / 2, (1 - pi0) / 2, pi0 ), replace = TRUE, size = n)
+  return(beta)
+}</code></pre>
+<pre class="r"><code>num_dat &lt;- 100
+result_mat &lt;- matrix(NA, nrow = num_dat, ncol = 7)
+colnames(result_mat) &lt;- c(&quot;true_pi0&quot;, &quot;ash_pi0&quot;, &quot;mouth_pi0&quot;, &quot;ash_auc&quot;, 
+                          &quot;mouth_auc&quot;, &quot;ash_mse&quot;, &quot;mouth_mse&quot;)
+for (index in 1:num_dat) {
+  cat(&quot;Index:&quot;, index, &quot;\n&quot;)
+  true_pi0 &lt;- runif(1)
+  
+  simdat &lt;- poisthin(mat = t(hdat), nsamp = 100, ngene = 1000, prop_null = 0, 
+                     signal_fun = gen_beta, signal_params = list(pi0 = true_pi0))
+  
+  count_mat &lt;- t(simdat$Y)
+  Y &lt;- log2(count_mat + 1)
+  X &lt;- simdat$X
+  colnames(X) &lt;- c(&quot;Intercept&quot;, &quot;Treatment&quot;)
+  beta &lt;- simdat$beta
+  is_null &lt;- abs(simdat$beta) &lt; 10 ^ -12
+  
+  ## deal with some all zero columns of counts ----------------
+  if (any(apply(Y, 1, sd) &lt; 10 ^ -12)) {
+    which_good &lt;- apply(Y, 1, sd) &gt; 10 ^ -12
+    Y &lt;- Y[which_good, ] 
+    beta &lt;- beta[which_good]
+    is_null &lt;- is_null[which_good]
+    count_mat &lt;- count_mat[which_good, ]
+  }
+  
+  ## MOUTHWASH -------------------------------------
+  suppressMessages(mout &lt;- mouthwash(Y = t(Y), X = X, cov_of_interest = 2))
+  
+  ## SVA + VOOM + LIMMA + EBAYES -------------------
+  trash &lt;- capture.output(sout &lt;- sva(dat = Y, mod = X, X[, 1, drop = FALSE]))
+  Xsv &lt;- cbind(X, sout$sv)
+  vout &lt;- voom(counts = count_mat, design = Xsv)
+  lmout &lt;- lmFit(vout)
+  ebout &lt;- ebayes(fit = lmout)
+  betahat &lt;- lmout$coefficients[, 2]
+  sebetahat &lt;- sqrt(ebout$s2.post) * lmout$stdev.unscaled[, 2]
+  degrees_freedom &lt;- ebout$df.total[1] ## same for all indices, so choose first
+  suppressMessages(ashout &lt;- ashr::ash(betahat = betahat, sebetahat = sebetahat, df = degrees_freedom))
+  
+  ## LFDR&#39;s -----------------------------------------
+  alfdr &lt;- get_lfdr(ashout)  
+  mlfdr &lt;- get_lfdr(mout)
+  
+  ## posterior means --------------------------------
+  apm &lt;- get_pm(ashout)
+  mpm &lt;- get_pm(mout)
+
+  ## Put into result_mat ---------------------------
+  result_mat[index, 1] &lt;- mean(is_null)
+  result_mat[index, 2] &lt;- get_pi0(ashout)
+  result_mat[index, 3] &lt;- get_pi0(mout)
+  if (length(unique(is_null)) == 2) { ## deal with situations of all genes are null
+    result_mat[index, 4] &lt;- auc(predictor = alfdr, response = is_null)
+    result_mat[index, 5] &lt;- auc(predictor = mlfdr, response = is_null)    
+  }
+  result_mat[index, 6] &lt;- mean((apm - beta) ^ 2)
+  result_mat[index, 7] &lt;- mean((mpm - beta) ^ 2)
+}
+write.csv(result_mat, &quot;../output/bulk_bimodal_results.csv&quot;, row.names = FALSE)</code></pre>
+<pre class="r"><code>result_mat &lt;- read.csv(&quot;../output/bulk_bimodal_results.csv&quot;)</code></pre>
+<div id="plot-estimate-of-pi0" class="section level2">
+<h2>Plot Estimate of pi0</h2>
+<pre class="r"><code>as_data_frame(result_mat) %&gt;% 
+  select(true_pi0, ash_pi0, mouth_pi0) %&gt;%
+  gather(key = method, value = pi0hat, ash_pi0, mouth_pi0) -&gt;
+  longdat
+
+pl &lt;- ggplot(data = longdat, mapping = aes(x = true_pi0, y = pi0hat)) +
+  facet_grid(.~method) +
+  geom_point() +
+  theme_bw() +
+  theme(strip.background = element_rect(fill = &quot;white&quot;)) +
+  geom_abline(slope = 1, intercept = 0, lty = 2, col = 2, lwd = 1) +
+  ylim(0, 1) +
+  xlim(0, 1) +
+  xlab(&quot;True Pi0&quot;)
+print(pl)</code></pre>
+<p><img src="bulk_explore_files/figure-html/unnamed-chunk-5-1.png" width="672" /></p>
+<p>Plot AUC boxplots</p>
+<pre class="r"><code>as_data_frame(result_mat) %&gt;%
+  select(contains(&quot;auc&quot;), true_pi0) %&gt;%
+  gather(key = &quot;method&quot;, value = &quot;auc&quot;, contains(&quot;auc&quot;)) -&gt;
+  longdat
+
+
+ggplot(data = longdat, mapping = aes(x = method, y = auc)) +
+  geom_boxplot()</code></pre>
+<p><img src="bulk_explore_files/figure-html/unnamed-chunk-6-1.png" width="672" /></p>
+<p>AUC vs Pi0</p>
+<pre class="r"><code>ggplot(data = longdat, mapping = aes(x = true_pi0, y = auc)) +
+  facet_grid(.~method) +
+  geom_point() +
+  theme_bw() +
+  theme(strip.background = element_rect(fill = &quot;white&quot;)) +
+  xlab(&quot;pi0&quot;) +
+  ylab(&quot;auc&quot;)</code></pre>
+<p><img src="bulk_explore_files/figure-html/unnamed-chunk-7-1.png" width="672" /></p>
+<pre class="r"><code>sessionInfo()</code></pre>
+<pre><code>## R version 3.3.2 (2016-10-31)
+## Platform: x86_64-pc-linux-gnu (64-bit)
+## Running under: Ubuntu 16.04.3 LTS
+## 
+## locale:
+##  [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C              
+##  [3] LC_TIME=en_US.UTF-8        LC_COLLATE=en_US.UTF-8    
+##  [5] LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
+##  [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                 
+##  [9] LC_ADDRESS=C               LC_TELEPHONE=C            
+## [11] LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+## 
+## attached base packages:
+## [1] stats     graphics  grDevices utils     datasets  methods   base     
+## 
+## other attached packages:
+##  [1] dplyr_0.5.0       purrr_0.2.2.2     readr_1.0.0      
+##  [4] tidyr_0.6.1       tibble_1.3.3      ggplot2_2.2.1    
+##  [7] tidyverse_1.1.1   seqgendiff_0.1.0  pROC_1.9.1       
+## [10] limma_3.26.9      ashr_2.0.5        sva_3.18.0       
+## [13] genefilter_1.52.1 mgcv_1.8-17       nlme_3.1-131     
+## [16] vicar_0.1.6      
+## 
+## loaded via a namespace (and not attached):
+##  [1] Biobase_2.30.0       httr_1.2.1           jsonlite_1.5        
+##  [4] splines_3.3.2        foreach_1.4.3        modelr_0.1.0        
+##  [7] assertthat_0.2.0     stats4_3.3.2         yaml_2.1.14         
+## [10] RSQLite_1.1-2        backports_1.0.5      lattice_0.20-34     
+## [13] digest_0.6.12        rvest_0.3.2          colorspace_1.3-2    
+## [16] htmltools_0.3.6      Matrix_1.2-8         plyr_1.8.4          
+## [19] psych_1.6.12         XML_3.98-1.8         broom_0.4.2         
+## [22] haven_1.0.0          xtable_1.8-2         scales_0.4.1        
+## [25] annotate_1.48.0      IRanges_2.4.8        BiocGenerics_0.16.1 
+## [28] lazyeval_0.2.0       mnormt_1.5-5         survival_2.41-2     
+## [31] magrittr_1.5         readxl_0.1.1         memoise_1.1.0       
+## [34] evaluate_0.10.1      doParallel_1.0.10    MASS_7.3-45         
+## [37] xml2_1.1.1           forcats_0.2.0        foreign_0.8-67      
+## [40] truncnorm_1.0-7      tools_3.3.2          hms_0.3             
+## [43] stringr_1.2.0        S4Vectors_0.8.11     munsell_0.4.3       
+## [46] AnnotationDbi_1.32.3 rlang_0.1.1          grid_3.3.2          
+## [49] iterators_1.0.8      labeling_0.3         rmarkdown_1.6       
+## [52] gtable_0.2.0         codetools_0.2-15     DBI_0.6             
+## [55] reshape2_1.4.2       R6_2.2.2             lubridate_1.6.0     
+## [58] knitr_1.16           rprojroot_1.2        stringi_1.1.2       
+## [61] pscl_1.4.9           parallel_3.3.2       SQUAREM_2016.8-2    
+## [64] Rcpp_0.12.12</code></pre>
+</div>
+</div>
+
+<hr>
+<p>
+    This <a href="http://rmarkdown.rstudio.com">R Markdown</a> site was created with <a href="https://github.com/jdblischak/workflowr">workflowr</a>
+</p>
+<hr>
+
+<!-- To enable disqus, uncomment the section below and provide your disqus_shortname -->
+
+<!-- disqus
+  <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = 'rmarkdown'; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    <a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+-->
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.header').parent('thead').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
