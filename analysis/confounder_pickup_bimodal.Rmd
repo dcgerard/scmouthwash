@@ -1,0 +1,166 @@
+---
+title: "See if confounders are picking up bimodality"
+author: "David Gerard"
+date: "September 21, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Abstract
+
+Here, I explore if the confounders are picking up the bimodality for small $\pi_0$.
+
+# Analysis
+
+```{r, message=FALSE, warning=FALSE}
+library(vicar)
+library(sva)
+library(ashr)
+library(limma)
+library(pROC)
+load("../data/counts-allgenes-bimodal.rda")
+```
+
+```{r}
+result_mat <- read.csv("../output/sc_joyce_bimodal_results.csv")
+index <- 4 ## has a small pi0
+result_mat$true_pi0[index]
+```
+
+```{r, cache = TRUE}
+count_mat <- counts_allgenes_bimodal[[index]]$counts
+Y <- log2(count_mat + 1)
+X <- model.matrix(~as.factor(counts_allgenes_bimodal[[index]]$condition))
+colnames(X) <- c("Intercept", "Treatment")
+beta <- counts_allgenes_bimodal[[index]]$beta
+is_null <- counts_allgenes_bimodal[[index]]$null
+
+## deal with some all zero columns of counts ----------------
+if (any(apply(Y, 1, sd) < 10 ^ -12)) {
+  which_good <- apply(Y, 1, sd) > 10 ^ -12
+  Y <- Y[which_good, ] 
+  beta <- beta[which_good]
+  is_null <- is_null[which_good]
+  count_mat <- count_mat[which_good, ]
+}
+
+## MOUTHWASH -------------------------------------
+suppressMessages(mout <- mouthwash(Y = t(Y), X = X, cov_of_interest = 2, detailed_output = TRUE))
+
+## SVA + VOOM + LIMMA + EBAYES -------------------
+trash <- capture.output(sout <- sva(dat = Y, mod = X, X[, 1, drop = FALSE]))
+Xsv <- cbind(X, sout$sv)
+vout <- voom(counts = count_mat, design = Xsv)
+lmout <- lmFit(vout)
+ebout <- ebayes(fit = lmout)
+betahat <- lmout$coefficients[, 2]
+sebetahat <- sqrt(ebout$s2.post) * lmout$stdev.unscaled[, 2]
+degrees_freedom <- ebout$df.total[1] ## same for all indices, so choose first
+suppressMessages(ashout <- ashr::ash(betahat = betahat, sebetahat = sebetahat, df = degrees_freedom))
+```
+
+## Explore MOUTHWASH confounders
+
+The true betas are basically just -2, 0, and 2
+```{r}
+hist(beta)
+```
+
+The effect of the confounders is definely associated with beta.
+```{r}
+beta_round <- round(beta)
+boxplot(mout$extra$az~beta_round)
+```
+
+
+```{r, eval = FALSE, echo = FALSE}
+##MOUTHWASH's betahat is actually also associated with beta
+mpm <- get_pm(mout)
+boxplot(mpm ~ beta_round)
+```
+
+
+```{r, eval = FALSE, echo = FALSE}
+## But ASH is a lot better
+apm <- get_pm(ashout)
+boxplot(apm ~ beta_round)
+```
+
+
+If Z2 is picking up as much of the signal as possible (because it's trying to account for deviations from unimodality), then one would expect its least squares to the true beta would be about what z2hat is. I.e.
+
+$$
+\hat{z}_2 \approx (\tilde{\alpha}^T\tilde{\alpha})^{-1}\tilde{\alpha}^T\beta
+$$
+Let's check:
+
+```{r}
+stupid_z2hat <- solve(crossprod(mout$extra$alpha_tilde)) %*% t(mout$extra$alpha_tilde) %*% beta
+plot(mout$z2, stupid_z2hat, xlab = "Mouthwash's z2hat", ylab = "Z2 that absorbs as much beta has possible")
+abline(0, 1, lty = 2)
+cor(mout$z2, stupid_z2hat)
+cor(mout$z2, stupid_z2hat, method = "kendall")
+```
+
+Whoa.
+
+
+# Repeat with a dataset with few non-null genes
+
+```{r}
+index <- 80
+result_mat$true_pi0[index]
+```
+
+```{r, cache = TRUE}
+count_mat <- counts_allgenes_bimodal[[index]]$counts
+Y <- log2(count_mat + 1)
+X <- model.matrix(~as.factor(counts_allgenes_bimodal[[index]]$condition))
+colnames(X) <- c("Intercept", "Treatment")
+beta <- counts_allgenes_bimodal[[index]]$beta
+is_null <- counts_allgenes_bimodal[[index]]$null
+
+## deal with some all zero columns of counts ----------------
+if (any(apply(Y, 1, sd) < 10 ^ -12)) {
+  which_good <- apply(Y, 1, sd) > 10 ^ -12
+  Y <- Y[which_good, ] 
+  beta <- beta[which_good]
+  is_null <- is_null[which_good]
+  count_mat <- count_mat[which_good, ]
+}
+
+## MOUTHWASH -------------------------------------
+suppressMessages(mout <- mouthwash(Y = t(Y), X = X, cov_of_interest = 2, detailed_output = TRUE))
+
+## SVA + VOOM + LIMMA + EBAYES -------------------
+trash <- capture.output(sout <- sva(dat = Y, mod = X, X[, 1, drop = FALSE]))
+Xsv <- cbind(X, sout$sv)
+vout <- voom(counts = count_mat, design = Xsv)
+lmout <- lmFit(vout)
+ebout <- ebayes(fit = lmout)
+betahat <- lmout$coefficients[, 2]
+sebetahat <- sqrt(ebout$s2.post) * lmout$stdev.unscaled[, 2]
+degrees_freedom <- ebout$df.total[1] ## same for all indices, so choose first
+suppressMessages(ashout <- ashr::ash(betahat = betahat, sebetahat = sebetahat, df = degrees_freedom))
+```
+
+```{r}
+auc(predictor = get_lfdr(mout), response = is_null)
+auc(predictor = get_lfdr(ashout), response = is_null)
+```
+
+```{r}
+stupid_z2hat <- solve(crossprod(mout$extra$alpha_tilde)) %*% t(mout$extra$alpha_tilde) %*% beta
+plot(mout$z2, stupid_z2hat, xlab = "Mouthwash's z2hat", ylab = "Z2 that absorbs as much beta has possible")
+abline(0, 1, lty = 2)
+```
+
+Nope, not capturing beta.
+
+
+```{r}
+sessionInfo()
+```

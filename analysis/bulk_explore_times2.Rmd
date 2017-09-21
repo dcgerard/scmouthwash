@@ -1,0 +1,161 @@
+---
+title: "Try Bimodal on Bulk Data"
+author: "David Gerard"
+date: "September 21, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Abstract
+
+I try the same as code as in [here](bulk_explore.html) use +/-2 as the signal, as in Joyce's work.
+
+# Analysis
+
+```{r, message=FALSE, warning=FALSE}
+library(vicar)
+library(sva)
+library(ashr)
+library(limma)
+library(pROC)
+library(seqgendiff)
+library(tidyverse)
+hdat <- as.matrix(read.csv("../data/heart.csv")[, -c(1, 2)])
+```
+
+Signal generation function. I fiddled with the signal to get AUC comparable with that seen in the SC data.
+```{r}
+## signal function
+gen_beta <- function(n, pi0) {
+  beta <- sample(x = c(-2, 2, 0), prob = c((1 - pi0) / 2, (1 - pi0) / 2, pi0 ), replace = TRUE, size = n)
+  return(beta)
+}
+```
+
+```{r, cache=TRUE, eval = FALSE}
+num_dat <- 100
+result_mat <- matrix(NA, nrow = num_dat, ncol = 7)
+colnames(result_mat) <- c("true_pi0", "ash_pi0", "mouth_pi0", "ash_auc", 
+                          "mouth_auc", "ash_mse", "mouth_mse")
+for (index in 1:num_dat) {
+  cat("Index:", index, "\n")
+  true_pi0 <- runif(1)
+  
+  simdat <- poisthin(mat = t(hdat), nsamp = 100, ngene = 1000, prop_null = 0, 
+                     signal_fun = gen_beta, signal_params = list(pi0 = true_pi0))
+  
+  count_mat <- t(simdat$Y)
+  Y <- log2(count_mat + 1)
+  X <- simdat$X
+  colnames(X) <- c("Intercept", "Treatment")
+  beta <- simdat$beta
+  is_null <- abs(simdat$beta) < 10 ^ -12
+  
+  ## deal with some all zero columns of counts ----------------
+  if (any(apply(Y, 1, sd) < 10 ^ -12)) {
+    which_good <- apply(Y, 1, sd) > 10 ^ -12
+    Y <- Y[which_good, ] 
+    beta <- beta[which_good]
+    is_null <- is_null[which_good]
+    count_mat <- count_mat[which_good, ]
+  }
+  
+  ## MOUTHWASH -------------------------------------
+  suppressMessages(mout <- mouthwash(Y = t(Y), X = X, cov_of_interest = 2))
+  
+  ## SVA + VOOM + LIMMA + EBAYES -------------------
+  trash <- capture.output(sout <- sva(dat = Y, mod = X, X[, 1, drop = FALSE]))
+  Xsv <- cbind(X, sout$sv)
+  vout <- voom(counts = count_mat, design = Xsv)
+  lmout <- lmFit(vout)
+  ebout <- ebayes(fit = lmout)
+  betahat <- lmout$coefficients[, 2]
+  sebetahat <- sqrt(ebout$s2.post) * lmout$stdev.unscaled[, 2]
+  degrees_freedom <- ebout$df.total[1] ## same for all indices, so choose first
+  suppressMessages(ashout <- ashr::ash(betahat = betahat, sebetahat = sebetahat, df = degrees_freedom))
+  
+  ## LFDR's -----------------------------------------
+  alfdr <- get_lfdr(ashout)  
+  mlfdr <- get_lfdr(mout)
+  
+  ## posterior means --------------------------------
+  apm <- get_pm(ashout)
+  mpm <- get_pm(mout)
+
+  ## Put into result_mat ---------------------------
+  result_mat[index, 1] <- mean(is_null)
+  result_mat[index, 2] <- get_pi0(ashout)
+  result_mat[index, 3] <- get_pi0(mout)
+  if (length(unique(is_null)) == 2) { ## deal with situations of all genes are null
+    result_mat[index, 4] <- auc(predictor = alfdr, response = is_null)
+    result_mat[index, 5] <- auc(predictor = mlfdr, response = is_null)    
+  }
+  result_mat[index, 6] <- mean((apm - beta) ^ 2)
+  result_mat[index, 7] <- mean((mpm - beta) ^ 2)
+}
+write.csv(result_mat, "../output/bulk_bimodal_results2.csv", row.names = FALSE)
+```
+
+```{r}
+result_mat <- read.csv("../output/bulk_bimodal_results2.csv")
+```
+
+## Plot Estimate of pi0
+```{r}
+as_data_frame(result_mat) %>% 
+  select(true_pi0, ash_pi0, mouth_pi0) %>%
+  gather(key = method, value = pi0hat, ash_pi0, mouth_pi0) ->
+  longdat
+
+pl <- ggplot(data = longdat, mapping = aes(x = true_pi0, y = pi0hat)) +
+  facet_grid(.~method) +
+  geom_point() +
+  theme_bw() +
+  theme(strip.background = element_rect(fill = "white")) +
+  geom_abline(slope = 1, intercept = 0, lty = 2, col = 2, lwd = 1) +
+  ylim(0, 1) +
+  xlim(0, 1) +
+  xlab("True Pi0")
+print(pl)
+```
+
+Plot AUC boxplots
+
+```{r}
+as_data_frame(result_mat) %>%
+  select(contains("auc"), true_pi0) %>%
+  gather(key = "method", value = "auc", contains("auc")) ->
+  longdat
+
+
+ggplot(data = longdat, mapping = aes(x = method, y = auc)) +
+  geom_boxplot()
+```
+
+AUC vs Pi0
+```{r}
+ggplot(data = longdat, mapping = aes(x = true_pi0, y = auc)) +
+  facet_grid(.~method) +
+  geom_point() +
+  theme_bw() +
+  theme(strip.background = element_rect(fill = "white")) +
+  xlab("pi0") +
+  ylab("auc")
+```
+
+```{r, eval = FALSE, echo = FALSE}
+as_data_frame(result_mat) %>%
+  select(contains("mse")) %>%
+  gather(key = "method", value = "mse") ->
+  longdat
+
+ggplot(data = longdat, mapping = aes(x = method, y = mse)) +
+  geom_boxplot()
+```
+
+```{r}
+sessionInfo()
+```

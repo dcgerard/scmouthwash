@@ -5,11 +5,16 @@ output:
     toc: false
 ---
 
-The goal of this new template is to simplify the setup and maintenance of a research website.
-Specifically,
+This project explores why MOUTHWASH worked poorly in Joyce's single cell data.
 
-*  Easier to build and extend the website using the new tools in the [rmarkdown][] package and [latest RStudio release][rstudio]
-*  Easier to deploy the website with Git and GitHub by only using one branch
+Conclusion: It takes the combination of large number of zeros (small counts), bimodal signal (my guess is more generally deviations from unimodality), and few null genes (lots of non-null genes), to make MOUTHWASH fail. If any one of these elements is missing, MOUTHWASH works fine in terms of AUC: [(i)](bulk_explore.html) if one has large counts but bimodal signal and small $\pi_0$ (last plot), [(ii)](thinned_bulk_normalsignal_explore.html) if one has normal signal but small counts and small $\pi_0$ (last plot), [(iii)](thinned_bulk_explore.html) if one has large $\pi_0$ but small counts and bimodal signal (last plot). For estimating $\pi_0$, MOUTHWASH and ASH behave about the same in scenarios (i) and (iii), MOUTHWASH has some anomolous results in scenario (ii).
 
-[rmarkdown]: http://rmarkdown.rstudio.com/rmarkdown_websites.htm
-[rstudio]: https://www.rstudio.com/products/rstudio/download/preview/
+Hypothesis: I think the problem is that MOUTHWASH *jointly* estimates the unimodal prior with a part of the confounders, so deviations from unimodality are going to be pushed into the part of the confounders. Since the SVA+VOOM+LIMMA+EBAYES+ASH pipeline estimats the confounders separately from the unimodal prior, it is more robust to violations from unimodality. I am guessing that it is easier to capture the non-unimodality when there are a lot of non-null genes and there are lots of small counts. This is backed up empirically [here](confounder_pickup_bimodal.html), where I show that MOUTHWASH's estimate of $z_2$ is approximately equal to $(\tilde{\alpha}^T\tilde{\alpha})^{-1}\tilde{\alpha}^T\beta$ (least squares fit of model $\beta \approx \tilde{\alpha}z_2$) when $\pi_0$ is small (and bimodal signal + small counts) but not when $\pi_0$ is large (and bimodal signal + small counts).
+
+* [AUC is only bad for MOUTHWASH when pi0 is small.](m_vs_svle_bimodal.html) This makes me hypothesize that it's not single cell that makes MOUTHWASH work poorly, but the *combination* of the bimodal signal (deviation from unimodal assumption) and the non-sparsity. That is, I think that with more signals, MOUTHWASH will "work harder" to account for deviations from the unimodal assumption by putting more of that signal into the confounders. MOUTHWASH is more susceptible to this because it estimates the unimodal signal *jointly* with a part of the confounders. The SVA+VOOM+LIMMA+EBAYES+ASH pipeline estimates the confounders separately from the unimodal signal, so is more robust to such deviations from unimodality.
+* [Same code as above but with spiky signal rather than bimodal signal.](m_vs_svle.html)
+* [z2hat in bimodal case takes as much signal as possible.](confounder_pickup_bimodal.html) This supports my above hypothesis. This only occurs in cases when the true $\pi_0$ is small.
+* [MOUTHWASH works fine (in terms of AUC, but not estimates of pi0) for bimodal signal in bulk RNA data](bulk_explore.html).
+* [Same as above but with huge signal](bulk_explore_times2.html). 
+* [Apply MOUTHWASH to low expressed bulk data with bimodal signal.](thinned_bulk_explore.html) I see MOUTHWASH work very well when $\pi_0 > 0.5$ and very poorly when $\pi_0 < 0.5$. Since this was not the case in the previous sims with highly expressed bulk data, I have to conclude that it's the combination of zeros, bimodal, and a large number of non-null genes.
+* [Apply MOUTHWASH in low expressed bulk data with normal signal.](thinned_bulk_normalsignal_explore.html) It doesn't work as well as ASH for $\pi_0$, but it is better for AUC, and its $\pi_0$ estimates have anomolous behavior only for very small values of $\pi_0$.
