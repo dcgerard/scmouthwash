@@ -422,7 +422,13 @@ suppressMessages(ashout &lt;- ashr::ash(betahat = betahat, sebetahat = sebetahat
 plot(mout$z2, stupid_z2hat, xlab = &quot;Mouthwash&#39;s z2hat&quot;, ylab = &quot;Z2 that absorbs as much beta has possible&quot;)
 abline(0, 1, lty = 2)</code></pre>
 <p><img src="confounder_pickup_bimodal_files/figure-html/unnamed-chunk-12-1.png" width="672" /></p>
-<p>Nope, not capturing beta.</p>
+<pre class="r"><code>cor(stupid_z2hat, mout$z2)</code></pre>
+<pre><code>##         [,1]
+## [1,] -0.5637</code></pre>
+<pre class="r"><code>cor(stupid_z2hat, mout$z2, method = &quot;kendall&quot;)</code></pre>
+<pre><code>##         [,1]
+## [1,] -0.3846</code></pre>
+<p>A little bit, but not as much.</p>
 <pre class="r"><code>sessionInfo()</code></pre>
 <pre><code>## R version 3.3.2 (2016-10-31)
 ## Platform: x86_64-pc-linux-gnu (64-bit)

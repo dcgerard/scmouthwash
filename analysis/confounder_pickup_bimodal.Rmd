@@ -156,9 +156,11 @@ auc(predictor = get_lfdr(ashout), response = is_null)
 stupid_z2hat <- solve(crossprod(mout$extra$alpha_tilde)) %*% t(mout$extra$alpha_tilde) %*% beta
 plot(mout$z2, stupid_z2hat, xlab = "Mouthwash's z2hat", ylab = "Z2 that absorbs as much beta has possible")
 abline(0, 1, lty = 2)
+cor(stupid_z2hat, mout$z2)
+cor(stupid_z2hat, mout$z2, method = "kendall")
 ```
 
-Nope, not capturing beta.
+A little bit, but not as much.
 
 
 ```{r}
