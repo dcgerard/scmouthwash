@@ -18,3 +18,7 @@ Hypothesis: I think the problem is that MOUTHWASH *jointly* estimates the unimod
 * [Same as above but with huge signal](bulk_explore_times2.html). 
 * [Apply MOUTHWASH to low expressed bulk data with bimodal signal.](thinned_bulk_explore.html) I see MOUTHWASH work very well when $\pi_0 > 0.5$ and very poorly when $\pi_0 < 0.5$. Since this was not the case in the previous sims with highly expressed bulk data, I have to conclude that it's the combination of zeros, bimodal, and a large number of non-null genes.
 * [Apply MOUTHWASH in low expressed bulk data with normal signal.](thinned_bulk_normalsignal_explore.html) It doesn't work as well as ASH for $\pi_0$, but it is better for AUC, and its $\pi_0$ estimates have anomolous behavior only for very small values of $\pi_0$.
+
+
+
+* [Variance estimates are almost the same using either Wang approach or Gagnon-Bartsch approach](check_var.html)

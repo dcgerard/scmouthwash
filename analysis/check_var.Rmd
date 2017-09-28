@@ -1,0 +1,105 @@
+---
+title: "FA and Variances"
+author: "David Gerard"
+date: "September 28, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Abstract
+
+I show that the variance estimates are the same whether we use Wang et al's approach or Gagnon-Bartsch et al's approach.
+
+# Simulate Data from Assumed Model
+
+```{r}
+set.seed(1)
+n <- 11
+p <- 103
+q <- 3
+k <- 2
+pi0 <- 0.8
+X <- model.matrix(~sample(x = c(0, 1), size = n, replace = TRUE, prob = c(1/2, 1/2)))
+colnames(X) <- c("Intercept", "Treatment")
+Beta <- matrix(rnorm(k * p), nrow = k)
+which_null <- sample(x = c(TRUE, FALSE), size = p, replace = TRUE, prob = c(pi0, 1 - pi0))
+Beta[2, which_null] <- 0
+Z <- X %*% matrix(rnorm(k * q), nrow = k) + matrix(rnorm(n * q), nrow = n)
+Alpha <- matrix(rnorm(q * p), nrow = q)
+sig2_diag_true <- rchisq(n = p, df = 4) / 4
+E <- matrix(rnorm(n * p), nrow = n) %*% diag(sqrt(sig2_diag_true))
+Y <- X %*% Beta + Z %*% Alpha + E
+```
+
+
+
+# Get the two different matrices
+```{r}
+Q <- qr.Q(qr(X), complete = TRUE)
+Q2 <- Q[, -c(1:2), drop = FALSE]
+Y3 <- crossprod(Q2, Y) # The Wang matrix
+Resid_mat <- Q2 %*% Y3 # The Gagnon-Bartsch Matrix
+```
+
+# Sanity check that `Resid_mat` is actually the residuals
+```{r}
+Resid2 <- Y - X %*% solve(t(X) %*% X) %*% t(X) %*% Y
+plot(c(Resid_mat), c(Resid2))
+abline(0, 1, col = 2, lty = 2)
+```
+
+# Do FA on both
+
+```{r}
+library(vicar)
+wout <- pca_naive(Y = Y3, r = q)
+gout <- pca_naive(Y = Resid_mat, r = q)
+
+plot(abs(c(wout$alpha)), abs(c(gout$alpha)), main = "alpha for wang vs for gb")
+abline(0, 1, lty = 2)
+```
+
+The alpha estimates are slightly different because we scale them by `sqrt(nrow(Y))`, where `nrow(Y)` is `r n` in the residual matrix and `r n - k` in the rotated matrix.
+
+```{r}
+plot(wout$sig_diag, gout$sig_diag, main = "wang vs gb variances")
+abline(0, 1)
+```
+
+The same thing here, we divide the residual sums of squares by `nrow(Y) - r`, which is `r nrow(Y) - q` in the Gagnon-Bartsch matrix and `r nrow(Y) - q - k` in the Wang matrix.
+
+However, I would imagine that any sane person would divide by `nrow(Y) - k - q` regardless because we already regressed out the observed covariates. If so, then the variance estimates are the exact same.
+
+```{r}
+plot(wout$sig_diag, gout$sig_diag * (n - q) / (n - q - k), main = "wang vs (adjusted) gb variances")
+abline(0, 1)
+```
+
+# ML method
+```{r}
+w_ml <- fa_ml(Y = Y3, r = q)
+g_ml <- fa_ml(Y = Resid_mat, r = q)
+```
+
+For the MLE FA, it doesn't seem to work out as exactly.
+
+```{r}
+plot(abs(c(w_ml$alpha)), abs(c(g_ml$alpha)))
+abline(0, 1, lty = 2, col = 2)
+```
+
+```{r}
+plot(w_ml$sig_diag, g_ml$sig_diag, main = "wang vs gb variances")
+abline(0, 1)
+
+plot(w_ml$sig_diag, g_ml$sig_diag * (n - q) / (n - k - q), main = "wang vs gb (adjusted) variances")
+abline(0, 1)
+```
+
+
+```{r}
+sessionInfo()
+```
