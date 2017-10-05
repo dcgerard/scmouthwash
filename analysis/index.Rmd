@@ -22,3 +22,4 @@ Hypothesis: I think the problem is that MOUTHWASH *jointly* estimates the unimod
 
 
 * [Variance estimates are almost the same using either Wang approach or Gagnon-Bartsch approach](check_var.html)
+* [Code to make that mouthwash plot](make_sims_plot.html)
