@@ -12,6 +12,8 @@ knitr::opts_chunk$set(echo = TRUE)
 Code to reproduce plot for MS.
 
 ```{r}
+library(tidyverse)
+library(ggthemes)
 replace_names <- function(x) {
   x <- stringr::str_replace(x, "pi0_", "")
   x <- stringr::str_replace(x, "auc_", "")
@@ -28,31 +30,52 @@ replace_names <- function(x) {
   x <- stringr::str_replace(x, "_madcal", "+MAD")
   x <- stringr::str_replace(x, "pvalue_", "")
   x <- stringr::str_replace(x, "ols", "OLS")
-  x <- stringr::str_replace(x, "sva", "SVA")
+  x <- stringr::str_replace(x, "sva", "SVA+limma")
   x <- stringr::str_replace(x, "_norm", "")
 }
 
+## The code to generate these results can be found here: https://github.com/dcgerard/mouthwash_sims
 sims_file <- "/home/david/Code/rcc_copy/projects/reproduce_mouthwash/Output/sims_out/sims_out.RDS"
 
 ## pi0 first ------------------------------------------------------------
-library(tidyverse)
+
 dat <- as_data_frame(readRDS(file = sims_file))
-longdat <- select(dat, nullpi, Nsamp, ncontrols, contains("pi0")) %>%
-  gather(key = "Method", value = "pi0hat", pi0_ash_ols:pi0_qvalue_caterr_cal) %>%
+longdat <- select(dat, nullpi, Nsamp, ncontrols, contains("pi0")) %>% 
+  select(-pi0_ash_ols, -pi0_qvalue_ols) %>%
+  gather(key = "Method", value = "pi0hat", pi0_ash_ruv2:pi0_qvalue_caterr_cal) %>%
   filter(Nsamp == 40, nullpi == 0.9, ncontrols == 100)
 longdat$Method <- replace_names(longdat$Method)
-msedat <- mutate(longdat, squared_differences = (pi0hat - 0.9) ^ 2) %>%
+
+as_data_frame(readRDS(file = "../output/deseq2_limma_sims_results.RDS")) %>%
+  transmute(nullpi = nullpi, Nsamp = Nsamp, ncontrols = ncontrols, `limma+ASH` = pi0_ash_limma,
+            `limma+qvalue` = pi0_qvalue_limma, `DESeq2+ASH` = pi0_ash_deseq2, `DESeq2+qvalue` = pi0_qvalue_deseq2) %>%
+  gather(key = "Method", value = "pi0hat", `limma+ASH`, `limma+qvalue`, `DESeq2+ASH`, `DESeq2+qvalue`) %>%
+  bind_rows(longdat) ->
+  finaldat
+
+
+msedat <- mutate(finaldat, squared_differences = (pi0hat - 0.9) ^ 2) %>%
   group_by(Method) %>%
   summarise(mse = mean(squared_differences))
-longdat$Method <- factor(longdat$Method, levels = msedat$Method[order(msedat$mse, decreasing = FALSE)])
+finaldat$Method <- factor(finaldat$Method, levels = msedat$Method[order(msedat$mse, decreasing = FALSE)])
 
-pl <- ggplot(data = longdat, mapping = aes(y = pi0hat, x = Method)) +
-  geom_boxplot(outlier.size = 0.1) +
+## the code for these results can be found in: "../code/mouthwash_sims.R"
+
+finaldat$is_sva <- finaldat$Method == "SVA+limma+qvalue"
+
+colvec <- ggthemes::colorblind_pal()(2)
+
+ylab <- bquote(.("Estimate of")~pi[0])
+
+pl <- ggplot(data = finaldat, mapping = aes(y = pi0hat, x = Method, fill = is_sva)) +
+  geom_boxplot(outlier.size = 0.2) +
   geom_hline(yintercept = 0.9, lty = 2, col = "red") +
   theme_bw() +
   theme(strip.background = element_rect(fill = "white"),
         axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
-  ylab("Estimate of Pi0")
+  ylab(ylab) +
+  scale_fill_manual(values = c(NA, colvec[2])) +
+  guides(fill = FALSE)
 
   pdf(file = "mouthwash_pi0_box.pdf", colormodel = "cmyk",
       family = "Times", width = 6, height = 4)

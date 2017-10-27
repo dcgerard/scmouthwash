@@ -1,0 +1,19 @@
+---
+title: "Analyze Square Root Sims"
+author: "David Gerard"
+date: "October 27, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Abstract
+
+Here, I analyze the square root sims.
+
+```{r}
+sessionInfo()
+```
+
