@@ -11,7 +11,116 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Abstract
 
-Here, I analyze the square root sims.
+Here, I analyze the square root sims. I ran the simulations [here](https://github.com/dcgerard/scmouthwash/blob/master/code/square_root_sims.R).
+
+# Analysis
+
+```{r, fig.width=6, fig.height=12}
+
+replace_names <- function(x) {
+  x <- stringr::str_replace(x, "pi0_", "")
+  x <- stringr::str_replace(x, "auc_", "")
+  x <- stringr::str_replace(x, "mse_", "")
+  x <- stringr::str_replace(x, "ash_mouthwash", "MOUTHWASH")
+  x <- stringr::str_replace(x, "ash_backwash", "BACKWASH")
+  x <- stringr::str_replace(x, "ash_(.+)", "\\1+ASH")
+  x <- stringr::str_replace(x, "qvalue_(.+)", "\\1+qvalue")
+  x <- stringr::str_replace(x, "ruv", "RUV")
+  x <- stringr::str_replace(x, "caterr_cal", "CATErr+MAD")
+  x <- stringr::str_replace(x, "cate_nccal", "CATEnc+Cal")
+  x <- stringr::str_replace(x, "caterr", "CATErr")
+  x <- stringr::str_replace(x, "cate", "CATEnc")
+  x <- stringr::str_replace(x, "_madcal", "+MAD")
+  x <- stringr::str_replace(x, "pvalue_", "")
+  x <- stringr::str_replace(x, "ols", "OLS")
+  x <- stringr::str_replace(x, "sva", "SVA")
+  x <- stringr::str_replace(x, "_norm", "")
+}
+
+## pi0 first ------------------------------------------------------------
+library(tidyverse)
+dat <- as_data_frame(readRDS(file = "../output/square_root_sims_out.RDS"))
+longdat <- select(dat, nullpi, Nsamp, ncontrols, contains("pi0")) %>%
+  gather(key = "Method", value = "pi0hat", pi0_ash_ols:pi0_qvalue_caterr_cal)
+longdat$Method <- replace_names(longdat$Method)
+
+for (nullpi_current in c(0.5, 0.9, 1)) {
+  sublongdat <- filter(longdat, nullpi == nullpi_current)
+
+  mse_dat <- sublongdat %>% filter(Nsamp == 40, ncontrols == 100) %>%
+    group_by(Method) %>%
+    summarize(mse = sum((pi0hat - nullpi_current) ^ 2))
+  factor_levels <- mse_dat$Method[order(mse_dat$mse, decreasing = FALSE)]
+  sublongdat$Method <- factor(sublongdat$Method, levels = factor_levels)
+
+  pl <- ggplot(data = sublongdat, mapping = aes(y = pi0hat, x = Method)) +
+    facet_grid(Nsamp ~ ncontrols) +
+    geom_boxplot(outlier.size = 0.1) +
+    geom_hline(yintercept = nullpi_current, lty = 2, col = "red") +
+    theme_bw() +
+    theme(strip.background = element_rect(fill = "white"),
+          axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+    ylab("Estimate of Pi0")
+
+  pdf(file = paste0("../output/sqfigures/pi0_box_", nullpi_current * 100, ".pdf"), colormodel = "cmyk",
+      family = "Times", width = 6.5, height = 7)
+  print(pl) ## Save
+  dev.off()
+  print(pl)
+}
+
+```
+
+Now AUC
+```{r, fig.width=6, fig.height=12}
+## Now AUC --------------------------------------------------------------
+dat <- as_data_frame(readRDS(file = "../output/square_root_sims_out.RDS"))
+longdat <- select(dat, nullpi, Nsamp, ncontrols, contains("auc")) %>%
+  gather(key = "Method", value = "auc", auc_ash_ols:auc_pvalue_caterr) %>%
+  filter(nullpi != 1)
+
+meddat <- longdat %>% group_by(nullpi, Nsamp, ncontrols, Method) %>%
+  summarize(mean = mean(auc)) %>%
+  ungroup()
+
+meddat$Method <- replace_names(meddat$Method)
+
+## Get ordering
+subsamp       <- filter(meddat, Nsamp == 40, nullpi == 0.9, ncontrols == 100)
+falevels      <- subsamp$Method[order(subsamp$mean, decreasing = TRUE)]
+meddat$Method <- factor(meddat$Method, levels = falevels)
+meddat$Nsamp  <- as.factor(meddat$Nsamp)
+
+maxdat <- meddat %>%
+  group_by(nullpi, Nsamp, ncontrols) %>%
+  summarize(max = max(mean)) %>%
+  ungroup()
+
+pl <- ggplot(data = meddat, mapping = aes(x = Method, y = mean, pch = as.factor(Nsamp))) +
+  facet_grid(nullpi ~ ncontrols)  +
+  theme_bw() +
+  theme(strip.background = element_rect(fill = "white"),
+        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+  geom_point() +
+  geom_hline(data = maxdat, mapping = aes(yintercept = max, lty = Nsamp), alpha = 1/2) +
+  scale_linetype_discrete(name = "Max Mean at\nSample Size") +
+  scale_shape_discrete(name = "Sample Size") +
+  ylab("Mean AUC")
+
+pdf(file = "../output/sqfigures/sqauc.pdf", colormodel = "cmyk",
+    family = "Times", width = 6.5, height = 7)
+print(pl)
+dev.off()
+
+print(pl)
+```
+
+
+
+```{r}
+sqdat <- readRDS("../output/square_root_sims_out.RDS")
+```
+
 
 ```{r}
 sessionInfo()

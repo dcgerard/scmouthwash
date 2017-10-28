@@ -20,6 +20,8 @@ Hypothesis: I think the problem is that MOUTHWASH *jointly* estimates the unimod
 * [Apply MOUTHWASH in low expressed bulk data with normal signal.](thinned_bulk_normalsignal_explore.html) It doesn't work as well as ASH for $\pi_0$, but it is better for AUC, and its $\pi_0$ estimates have anomolous behavior only for very small values of $\pi_0$.
 
 
+# Explore MOUTHWASH
 
 * [Variance estimates are almost the same using either Wang approach or Gagnon-Bartsch approach](check_var.html)
 * [Code to make that mouthwash plot](make_sims_plot.html)
+* [Signal on log-scale, fit on square-root scale.](square_root_analysis.html) Here, I add signal as before on the log-scale, but I fit all methods using the square-root transformed data. MOUTHWASH performs OK when most of the genes are NULL, but poorly when half are non-null. It is too conservative in estimating $\pi_0$ and it has lower AUC. Though when the sample size is large enough this poor performance goes away. SVA+ASH is surprisingly good when half of the genes are non-null (in terms of AUC, not in terms of estimating $\pi_0$).
