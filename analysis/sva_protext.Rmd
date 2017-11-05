@@ -1,0 +1,61 @@
+---
+title: "Does SVA 'Protect' the Covariates of Interest?"
+author: "David Gerard"
+date: "November 5, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Abstract
+
+Here, I show that SVA does not result in surrogate variables that are orthogonal to the covariates of interest. But neither are they orthogonal to the nuisance covariates.
+
+# Generate Data From Assumed Model
+
+```{r}
+set.seed(1)
+n <- 13
+p <- 83
+k <- 2
+q <- 3
+
+X <- cbind(rep(1, n), matrix(sample(c(0, 1), size = k * n, replace = TRUE), ncol = k))
+beta <- matrix(rnorm((k + 1) * p), nrow = k + 1)
+beta[cbind(sample(c(2,3), 80, TRUE), sample(1:83, 80, replace = TRUE))] <- 0
+Z <- matrix(rnorm(n * q), nrow = n)
+alpha <- matrix(rnorm(q * p), nrow = q)
+E <- matrix(rnorm(n * p), nrow = n)
+Y <- X %*% beta + Z %*% alpha + E
+```
+
+# Fit SVA
+
+```{r}
+library(sva)
+X0 <- X[, 1:2]
+svout <- sva(dat = t(Y), mod = X, mod0 = X0)
+```
+
+The surrogate variables are not orthogonal to the covariate of interest (column 3) but neither are they orthogonal to the nuisance covariate (column 2). However, they are orthogonal to the intercept.
+
+```{r}
+sv <- svout$sv
+crossprod(X, sv)
+```
+
+Results change when nuisance covariate is now considered of interest
+```{r}
+svout <- sva(dat = t(Y), mod = X)
+sv <- svout$sv
+crossprod(X, sv)
+```
+
+
+
+```{r}
+sessionInfo()
+```
+
