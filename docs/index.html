@@ -225,6 +225,7 @@ $(document).ready(function () {
 <li><a href="check_var.html">Variance estimates are almost the same using either Wang approach or Gagnon-Bartsch approach</a></li>
 <li><a href="make_sims_plot.html">Code to make that mouthwash plot</a></li>
 <li><a href="square_root_analysis.html">Signal on log-scale, fit on square-root scale.</a> Here, I add signal as before on the log-scale, but I fit all methods using the square-root transformed data. MOUTHWASH performs OK when most of the genes are NULL, but poorly when half are non-null. It is too conservative in estimating <span class="math inline">\(\pi_0\)</span> and it has lower AUC. Though when the sample size is large enough this poor performance goes away. SVA+ASH is surprisingly good when half of the genes are non-null (in terms of AUC, not in terms of estimating <span class="math inline">\(\pi_0\)</span>).</li>
+<li><a href="sva_protext.html">SVA results in sv’s that are correlated with observed covariates, both nuisance and those of interest</a></li>
 </ul>
 </div>
 
