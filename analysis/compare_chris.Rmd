@@ -1,0 +1,111 @@
+---
+title: "Compare MOUTHWASH Factor with Chris' Factor"
+author: "David Gerard"
+date: "January 10, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Abstract
+
+Using the notation from Gerard and Stephens (2017), the second step of MOUTHWASH uses the model
+$$
+\hat{\beta} \sim N_p(\beta + \hat{\alpha}^Tz, \xi \Sigma / \|x\|^2),
+$$
+where $\Sigma = diag(\hat{\sigma}_1^2,\ldots,\hat{\sigma}_p^2)$. In Chris' write-up, he proposes fitting
+$$
+\hat{\beta} \sim N_p(\beta + \hat{\alpha}^Tz, [1/\|x\|^2 + \|z\|^2 / (n-1)]\Sigma).
+$$
+As a first step to see if Chris' idea is correct, we will see if the variance inflation factors approximately equal each other (or are at least correlated):
+$$
+\xi/\|x\|^2 \approx 1/\|x\|^2 + \|z\|^2 / (n-1)\\
+\Leftrightarrow \xi \approx 1 + \|x\|^2\|z\|^2 / (n-1).
+$$
+
+This is easy to check using the current implementation of MOUTHWASH.
+
+# Analysis
+
+```{r, message=FALSE, warning=FALSE, eval=FALSE}
+library(vicar)
+library(seqgendiff)
+library(sva)
+hdat <- as.matrix(read.csv("../data/heart.csv")[, -c(1, 2)])
+```
+
+
+```{r, eval = FALSE}
+set.seed(3)
+num_sim <- 100
+
+chris_vec <- rep(NA, length = num_sim)
+mouth_vec <- rep(NA, length = num_sim)
+pihat_vec <- rep(NA, length = num_sim)
+for (index in 1:num_sim) {
+  cat("Iteration:", index, "\n")
+  
+  num_sv <- 0
+  
+  while(num_sv == 0) {
+    ## Simulate some data
+    simdat <- poisthin(mat = t(hdat), nsamp = 10, ngene = 1000, prop_null = 0.9)
+    num_sv <- num.sv(dat = t(simdat$Y), mod = simdat$X)
+  }
+
+  ## Fit MOUTHWASH
+  mout <- mouthwash(Y = simdat$Y, X = simdat$X, cov_of_interest = 2, k = num_sv, detailed_output = TRUE)
+
+  ## Calculate Chris' variance inflation factor
+  xnorm <- mout$extra$rotate_out$R22^2
+  znorm <- sum(mout$z2 ^ 2)
+  inflate_chris <- 1 + xnorm * znorm / (nrow(simdat$X) - ncol(simdat$X))
+  chris_vec[index] <- inflate_chris
+  mouth_vec[index] <- mout$xi
+  pihat_vec[index] <- mout$pi0
+}
+saveRDS(list(chris = chris_vec, mouth = mouth_vec, pi0hat = pihat_vec), "../output/chris/mvc.RDS")
+```
+
+There seems to be almost no relationship between the two variance inflation factors:
+```{r}
+library(tidyverse)
+mvc <- readRDS("../output/chris/mvc.RDS")
+mouth <- mvc$mouth
+chris <- mvc$chris
+qplot(mouth, chris) + theme_bw()
+cor(mouth, chris)
+cor(mouth, chris, method = "kendall")
+
+boxplot(mouth, chris, names = c("mouth", "chris"))
+```
+
+Though, the MOUTHWASH inflation factors have about the same median as the Chris inflation factors, but tend to be more dispersed.
+```{r}
+median(mouth)
+median(chris)
+sd(mouth)
+sd(chris)
+```
+
+It seems that MOUTHWASH isn't inflating the variances enough to get to a pi0 estimate of 0.9.
+```{r}
+boxplot(mvc$pi0hat)
+abline(h = 0.9, lty = 2)
+```
+
+Interestingly, there doesn't seem to be a strong association between how much MOUTHWASH inflates the variances and the resulting estimates of pi0.
+```{r, message=FALSE}
+qplot(mouth, mvc$pi0hat) + theme_bw() +
+  geom_smooth()
+```
+
+
+```{r}
+sessionInfo()
+```
+
+
+

@@ -26,3 +26,4 @@ Hypothesis: I think the problem is that MOUTHWASH *jointly* estimates the unimod
 * [Code to make that mouthwash plot](make_sims_plot.html)
 * [Signal on log-scale, fit on square-root scale.](square_root_analysis.html) Here, I add signal as before on the log-scale, but I fit all methods using the square-root transformed data. MOUTHWASH performs OK when most of the genes are NULL, but poorly when half are non-null. It is too conservative in estimating $\pi_0$ and it has lower AUC. Though when the sample size is large enough this poor performance goes away. SVA+ASH is surprisingly good when half of the genes are non-null (in terms of AUC, not in terms of estimating $\pi_0$).
 * [SVA results in sv's that are correlated with observed covariates, both nuisance and those of interest](sva_protext.html)
+* [Chris' variance inflation vs MOUTHWASH variance inflation.](compare_chris.html) They don't seem to be associated.
