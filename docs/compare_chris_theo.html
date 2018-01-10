@@ -9,9 +9,11 @@
 <meta name="generator" content="pandoc" />
 
 
+<meta name="author" content="David Gerard" />
 
+<meta name="date" content="2018-01-10" />
 
-<title>Home</title>
+<title>Compare Chris Simple Sims</title>
 
 <script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -19,6 +21,9 @@
 <script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
 <script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
 <script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<script src="site_libs/jqueryui-1.11.4/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
 <script src="site_libs/navigation-1.1/tabsets.js"></script>
 <link href="site_libs/highlightjs-1.1/textmate.css" rel="stylesheet" />
 <script src="site_libs/highlightjs-1.1/highlight.js"></script>
@@ -162,6 +167,101 @@ $(document).ready(function () {
 
 
 
+<script>
+$(document).ready(function ()  {
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_').toLowerCase();
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+  padding-left: 25px;
+  text-indent: 0;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row-fluid">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
 
 
 <div class="navbar navbar-default  navbar-fixed-top" role="navigation">
@@ -202,33 +302,72 @@ $(document).ready(function () {
 
 
 
-<h1 class="title toc-ignore">Home</h1>
+<h1 class="title toc-ignore">Compare Chris Simple Sims</h1>
+<h4 class="author"><em>David Gerard</em></h4>
+<h4 class="date"><em>January 10, 2018</em></h4>
 
 </div>
 
 
-<p>This project explores why MOUTHWASH worked poorly in Joyce’s single cell data.</p>
-<p>Conclusion: It takes the combination of large number of zeros (small counts), bimodal signal (my guess is more generally deviations from unimodality), and few null genes (lots of non-null genes), to make MOUTHWASH fail. If any one of these elements is missing, MOUTHWASH works fine in terms of AUC: <a href="bulk_explore.html">(i)</a> if one has large counts but bimodal signal and small <span class="math inline">\(\pi_0\)</span> (last plot), <a href="thinned_bulk_normalsignal_explore.html">(ii)</a> if one has normal signal but small counts and small <span class="math inline">\(\pi_0\)</span> (last plot), <a href="thinned_bulk_explore.html">(iii)</a> if one has large <span class="math inline">\(\pi_0\)</span> but small counts and bimodal signal (last plot). For estimating <span class="math inline">\(\pi_0\)</span>, MOUTHWASH and ASH behave about the same in scenarios (i) and (iii), MOUTHWASH has some anomolous results in scenario (ii).</p>
-<p>Hypothesis: I think the problem is that MOUTHWASH <em>jointly</em> estimates the unimodal prior with a part of the confounders, so deviations from unimodality are going to be pushed into the part of the confounders. Since the SVA+VOOM+LIMMA+EBAYES+ASH pipeline estimates the confounders separately from the unimodal prior, it is more robust to violations from unimodality. I am guessing that it is easier to capture the non-unimodality when there are a lot of non-null genes and there are lots of small counts. This is backed up empirically <a href="confounder_pickup_bimodal.html">here</a>, where I show that MOUTHWASH’s estimate of <span class="math inline">\(z_2\)</span> is approximately equal to <span class="math inline">\((\tilde{\alpha}^T\tilde{\alpha})^{-1}\tilde{\alpha}^T\beta\)</span> (least squares fit of model <span class="math inline">\(\beta \approx \tilde{\alpha}z_2\)</span>) when <span class="math inline">\(\pi_0\)</span> is small (and bimodal signal + small counts) but not when <span class="math inline">\(\pi_0\)</span> is large (and bimodal signal + small counts).</p>
-<ul>
-<li><a href="m_vs_svle_bimodal.html">AUC is only bad for MOUTHWASH when pi0 is small.</a> This makes me hypothesize that it’s not single cell that makes MOUTHWASH work poorly, but the <em>combination</em> of the bimodal signal (deviation from unimodal assumption) and the non-sparsity. That is, I think that with more signals, MOUTHWASH will “work harder” to account for deviations from the unimodal assumption by putting more of that signal into the confounders. MOUTHWASH is more susceptible to this because it estimates the unimodal signal <em>jointly</em> with a part of the confounders. The SVA+VOOM+LIMMA+EBAYES+ASH pipeline estimates the confounders separately from the unimodal signal, so is more robust to such deviations from unimodality.</li>
-<li><a href="m_vs_svle.html">Same code as above but with spiky signal rather than bimodal signal.</a></li>
-<li><a href="confounder_pickup_bimodal.html">z2hat in bimodal case takes as much signal as possible.</a> This supports my above hypothesis. This only occurs in cases when the true <span class="math inline">\(\pi_0\)</span> is small.</li>
-<li><a href="bulk_explore.html">MOUTHWASH works fine (in terms of AUC, but not estimates of pi0) for bimodal signal in bulk RNA data</a>.</li>
-<li><a href="bulk_explore_times2.html">Same as above but with huge signal</a>.</li>
-<li><a href="thinned_bulk_explore.html">Apply MOUTHWASH to low expressed bulk data with bimodal signal.</a> I see MOUTHWASH work very well when <span class="math inline">\(\pi_0 &gt; 0.5\)</span> and very poorly when <span class="math inline">\(\pi_0 &lt; 0.5\)</span>. Since this was not the case in the previous sims with highly expressed bulk data, I have to conclude that it’s the combination of zeros, bimodal, and a large number of non-null genes.</li>
-<li><a href="thinned_bulk_normalsignal_explore.html">Apply MOUTHWASH in low expressed bulk data with normal signal.</a> It doesn’t work as well as ASH for <span class="math inline">\(\pi_0\)</span>, but it is better for AUC, and its <span class="math inline">\(\pi_0\)</span> estimates have anomolous behavior only for very small values of <span class="math inline">\(\pi_0\)</span>.</li>
-</ul>
-<div id="explore-mouthwash" class="section level1">
-<h1>Explore MOUTHWASH</h1>
-<ul>
-<li><a href="check_var.html">Variance estimates are almost the same using either Wang approach or Gagnon-Bartsch approach</a></li>
-<li><a href="make_sims_plot.html">Code to make that mouthwash plot</a></li>
-<li><a href="square_root_analysis.html">Signal on log-scale, fit on square-root scale.</a> Here, I add signal as before on the log-scale, but I fit all methods using the square-root transformed data. MOUTHWASH performs OK when most of the genes are NULL, but poorly when half are non-null. It is too conservative in estimating <span class="math inline">\(\pi_0\)</span> and it has lower AUC. Though when the sample size is large enough this poor performance goes away. SVA+ASH is surprisingly good when half of the genes are non-null (in terms of AUC, not in terms of estimating <span class="math inline">\(\pi_0\)</span>).</li>
-<li><a href="sva_protext.html">SVA results in sv’s that are correlated with observed covariates, both nuisance and those of interest</a></li>
-<li><a href="compare_chris.html">Chris’ variance inflation vs MOUTHWASH variance inflation.</a> They don’t seem to be associated.</li>
-<li><a href="compare_chris_theo.html">Compare Chris in simulated data</a> We see a lot more concordance when we simulate from the assumed model.</li>
-</ul>
+<div id="abstract" class="section level1">
+<h1>Abstract</h1>
+<p>Same as <a href="compare_chris.html">here</a> but use simple simulated data.</p>
+<pre class="r"><code>library(vicar)
+set.seed(3)
+num_sim &lt;- 100
+n &lt;- 10
+p &lt;- 1000
+pi0 &lt;- 0.9
+
+chris_vec &lt;- rep(NA, length = num_sim)
+mouth_vec &lt;- rep(NA, length = num_sim)
+pihat_vec &lt;- rep(NA, length = num_sim)
+for (index in 1:num_sim) {
+  cat(&quot;Iteration:&quot;, index, &quot;\n&quot;)
+  
+  X &lt;- matrix(sample(x = c(0, 1), size = n, replace = TRUE), ncol = 1)
+  Z &lt;- matrix(sample(x = c(0, 1), size = n, replace = TRUE), ncol = 1)
+  beta &lt;- rnorm(p)
+  beta[1:round(pi0 * p)] &lt;- 0
+  alpha &lt;- rnorm(p)
+  E &lt;- matrix(rnorm(n * p), nrow = n)
+  Y &lt;- tcrossprod(X, beta) + tcrossprod(Z, alpha) + E
+
+  ## Fit MOUTHWASH
+  mout &lt;- mouthwash(Y = Y, X = X, cov_of_interest = 1, k = 1, detailed_output = TRUE)
+
+  ## Calculate Chris&#39; variance inflation factor
+  xnorm &lt;- mout$extra$rotate_out$R22^2
+  znorm &lt;- sum(mout$z2 ^ 2)
+  inflate_chris &lt;- 1 + xnorm * znorm / (nrow(X) - ncol(X))
+  chris_vec[index] &lt;- inflate_chris
+  mouth_vec[index] &lt;- mout$xi
+  pihat_vec[index] &lt;- mout$pi0
+}
+saveRDS(list(chris = chris_vec, mouth = mouth_vec, pi0hat = pihat_vec), &quot;../output/chris/mvc_theo.RDS&quot;)</code></pre>
+<p>Using simpler data, we see a lot more concordance.</p>
+<pre class="r"><code>library(tidyverse)</code></pre>
+<pre><code>## Loading tidyverse: ggplot2
+## Loading tidyverse: tibble
+## Loading tidyverse: tidyr
+## Loading tidyverse: readr
+## Loading tidyverse: purrr
+## Loading tidyverse: dplyr</code></pre>
+<pre><code>## Conflicts with tidy packages ----------------------------------------------</code></pre>
+<pre><code>## filter(): dplyr, stats
+## lag():    dplyr, stats</code></pre>
+<pre class="r"><code>mvc &lt;- readRDS(&quot;../output/chris/mvc_theo.RDS&quot;)
+mouth &lt;- mvc$mouth
+chris &lt;- mvc$chris
+qplot(mouth, chris) + theme_bw() +
+  geom_abline()</code></pre>
+<p><img src="compare_chris_theo_files/figure-html/unnamed-chunk-2-1.png" width="672" /></p>
+<pre class="r"><code>cor(mouth, chris)</code></pre>
+<pre><code>## [1] 0.9057</code></pre>
+<pre class="r"><code>cor(mouth, chris, method = &quot;kendall&quot;)</code></pre>
+<pre><code>## [1] 0.5406</code></pre>
+<pre class="r"><code>boxplot(mouth, chris, names = c(&quot;mouth&quot;, &quot;chris&quot;))</code></pre>
+<p><img src="compare_chris_theo_files/figure-html/unnamed-chunk-2-2.png" width="672" /></p>
 </div>
 
 <hr>
@@ -257,6 +396,8 @@ $(document).ready(function () {
 -->
 
 
+</div>
+</div>
 
 </div>
 

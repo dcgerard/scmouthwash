@@ -1,0 +1,65 @@
+---
+title: "Compare Chris Simple Sims"
+author: "David Gerard"
+date: "January 10, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Abstract
+
+Same as [here](compare_chris.html) but use simple simulated data.
+
+```{r, eval = FALSE}
+library(vicar)
+set.seed(3)
+num_sim <- 100
+n <- 10
+p <- 1000
+pi0 <- 0.9
+
+chris_vec <- rep(NA, length = num_sim)
+mouth_vec <- rep(NA, length = num_sim)
+pihat_vec <- rep(NA, length = num_sim)
+for (index in 1:num_sim) {
+  cat("Iteration:", index, "\n")
+  
+  X <- matrix(sample(x = c(0, 1), size = n, replace = TRUE), ncol = 1)
+  Z <- matrix(sample(x = c(0, 1), size = n, replace = TRUE), ncol = 1)
+  beta <- rnorm(p)
+  beta[1:round(pi0 * p)] <- 0
+  alpha <- rnorm(p)
+  E <- matrix(rnorm(n * p), nrow = n)
+  Y <- tcrossprod(X, beta) + tcrossprod(Z, alpha) + E
+
+  ## Fit MOUTHWASH
+  mout <- mouthwash(Y = Y, X = X, cov_of_interest = 1, k = 1, detailed_output = TRUE)
+
+  ## Calculate Chris' variance inflation factor
+  xnorm <- mout$extra$rotate_out$R22^2
+  znorm <- sum(mout$z2 ^ 2)
+  inflate_chris <- 1 + xnorm * znorm / (nrow(X) - ncol(X))
+  chris_vec[index] <- inflate_chris
+  mouth_vec[index] <- mout$xi
+  pihat_vec[index] <- mout$pi0
+}
+saveRDS(list(chris = chris_vec, mouth = mouth_vec, pi0hat = pihat_vec), "../output/chris/mvc_theo.RDS")
+```
+
+
+Using simpler data, we see a lot more concordance.
+```{r}
+library(tidyverse)
+mvc <- readRDS("../output/chris/mvc_theo.RDS")
+mouth <- mvc$mouth
+chris <- mvc$chris
+qplot(mouth, chris) + theme_bw() +
+  geom_abline()
+cor(mouth, chris)
+cor(mouth, chris, method = "kendall")
+
+boxplot(mouth, chris, names = c("mouth", "chris"))
+```
